@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Blochin pallo demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="main.css">
+    <script src="/lib/math.min.js"></script>
+    <script src="/math_support.js"></script>
+    <script src="/ports.js"></script>
+  </head>
+  <body>
+    <div id="info"></div>
+    
+    <div id="controls">
+    </div>
+
+    <script type="module">
+
+      import * as THREE from '/lib/three.module.js';
+
+      import { OrbitControls } from '/lib/OrbitControls.js';
+
+
+      
+      function registerPort(name) {
+        var btn = document.createElement("button");
+        btn.appendChild(document.createTextNode(name));
+        btn.setAttribute("data-name", name);
+        btn.addEventListener("mouseover", showPortAxis);
+        btn.addEventListener("mouseout", hidePortAxis);
+        btn.addEventListener("click", doPort);
+        document.getElementById("controls").appendChild(btn);
+      }
+
+      var group, camera, scene, renderer;
+      var arrow, axisArrow;
+      
+      var qubitState = math.matrix([[1], [0]]);
+      
+      var animating = false;
+      var animatingStarted, animatingAxis, animatingAngle, animatingBaseState;
+      
+      var showingAxis = false;
+      var showingAxisPort;
+      
+      function showPortAxis(e) {
+        var name = e.target.getAttribute("data-name");
+        showingAxis = true;
+        showingAxisPort = name;
+      }
+      
+      function hidePortAxis() {
+        showingAxis = false;
+      }
+      
+      function doPort(e) {
+        var name = e.target.getAttribute("data-name");
+        animatingStarted = (new Date()).getTime();
+        animatingAxis = new THREE.Vector3(...stateToBloch(ports[name].eigenvector));
+        animatingAngle = ports[name].rotation;
+        animatingBaseState = new THREE.Vector3(...stateToBloch(qubitState));
+        qubitState = math.multiply(ports[name].mat, qubitState);
+        updateInfo();
+        animating = true;
+      }
+      
+      function updateInfo() {
+        document.getElementById("info").innerHTML = math.format(qubitState, 2);
+      }
+      
+      for (var name in ports) {
+        registerPort(name);
+      }
+      updateInfo();
+      init3D();
+      animate();
+      
+      function init3D() {
+        scene = new THREE.Scene();
+
+        renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.setClearColor(0xffffff, 1);
+        document.body.appendChild( renderer.domElement );
+
+        // camera
+
+        camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+        camera.position.set( 15, 20, 30 );
+        scene.add( camera );
+
+        // controls
+
+        var orbit = new OrbitControls( camera, renderer.domElement );
+        orbit.minDistance = 20;
+        orbit.maxDistance = 50;
+        orbit.maxPolarAngle = Math.PI / 2;
+
+        scene.add( new THREE.AmbientLight( 0x222222 ) );
+
+        // light
+
+        var light = new THREE.PointLight( 0xffffff, 1 );
+        light.position.set(-50, 100, 50);
+        scene.add( light );
+
+        // helper
+
+        scene.add( new THREE.AxesHelper( 12 ) );
+
+        // textures
+
+        var loader = new THREE.TextureLoader();
+        var ket0t = loader.load('assets/ket 0.png');
+        var ket1t = loader.load('assets/ket 1.png');
+        var ket0m = new THREE.SpriteMaterial({ map: ket0t, alphaTest: 0.1, sizeAttenuation: false });
+        var ket1m = new THREE.SpriteMaterial({ map: ket1t, alphaTest: 0.1, sizeAttenuation: false });
+        var ket0s = new THREE.Sprite(ket0m);
+        ket0s.renderOrder = 0;
+        ket0s.position.set(0, 10, 0);
+        ket0s.center.set(-0.5, -0.5);
+        ket0s.scale.multiplyScalar(1/32);
+        var ket1s = new THREE.Sprite(ket1m);
+        ket1s.renderOrder = 0;
+        ket1s.position.set(0, -10, 0);
+        ket1s.center.set(-0.5, 1.5);
+        ket1s.scale.multiplyScalar(1/32);
+        scene.add(ket0s);
+        scene.add(ket1s);
+
+        group = new THREE.Group();
+        scene.add(group);
+
+        // points
+
+        // var vertices = new THREE.DodecahedronGeometry( 2 ).vertices;
+
+        // for ( var i = 0; i < vertices.length; i ++ ) {
+
+        //   //vertices[ i ].add( randomPoint().multiplyScalar( 2 ) ); // wiggle the points
+
+        // }
+
+        // var pointsMaterial = new THREE.PointsMaterial( {
+
+        //   color: 0x0080ff,
+        //   map: texture,
+        //   size: 1,
+        //   alphaTest: 0.5
+
+        // } );
+
+        // var pointsGeometry = new THREE.BufferGeometry().setFromPoints( vertices );
+
+        // var points = new THREE.Points( pointsGeometry, pointsMaterial );
+        // group.add( points );
+
+        // convex hull
+
+        var meshMaterial = new THREE.MeshLambertMaterial( {
+          color: 0xbbbbbb,
+          opacity: 0.5,
+          transparent: true
+        } );
+
+        var meshGeometry = new THREE.SphereGeometry(10, 128, 128);
+
+        //var mesh = new THREE.Mesh( meshGeometry, meshMaterial );
+        //mesh.material.side = THREE.BackSide; // back faces
+        //mesh.renderOrder = 0;
+        //group.add( mesh );
+
+        var mesh = new THREE.Mesh( meshGeometry, meshMaterial.clone() );
+        mesh.material.side = THREE.FrontSide; // front faces
+        mesh.renderOrder = 1;
+        group.add( mesh );
+        
+        
+        var circle_dash_material = new THREE.LineDashedMaterial({
+          color: 0x000000,
+          linewidth: 1,
+          scale: 1,
+          dashSize: 0.5,
+          gapSize: 0.5,
+        });
+        var circle_dash_g = new THREE.CircleGeometry(10.01, 128);
+        circle_dash_g.rotateX(Math.PI/2);
+        circle_dash_g.vertices.shift();
+        circle_dash_g.vertices.push(circle_dash_g.vertices[0]);
+        var circle_dash = new THREE.Line(circle_dash_g, circle_dash_material);
+        circle_dash.computeLineDistances();
+        scene.add(circle_dash);
+        
+        arrow = new THREE.ArrowHelper(new THREE.Vector3(...stateToBloch(qubitState)), new THREE.Vector3(0, 0, 0), 10, 0x000000, 1, 0.4);
+        arrow.line.material.linewidth = 2;
+        group.add(arrow);
+        
+        axisArrow = new THREE.ArrowHelper(new THREE.Vector3(...stateToBloch(qubitState)), new THREE.Vector3(0, 0, 0), 15, 0x000000, 1, 0.4);
+        var axisMaterial = new THREE.LineDashedMaterial({
+          color: 0x000000,
+          linewidth: 1,
+          scale: 1,
+          dashSize: 0.5,
+          gapSize: 0.5,
+        });
+        axisArrow.line.material = axisMaterial;
+        axisArrow.visible = false;
+        group.add(axisArrow);
+        
+        window.addEventListener( 'resize', onWindowResize, false );
+
+      }
+
+      function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+
+      }
+
+      function animate() {
+
+        //group.rotation.y += 0.005;
+        if (animating) {
+          var t = ((new Date()).getTime() - animatingStarted)/1000;
+          //var sv = ports[animatingPort].animatedRotation(animatingBaseState, t);
+          //arrow.setDirection(new THREE.Vector3(...stateToBloch(sv)));
+          axisArrow.visible = true;
+          axisArrow.setDirection(animatingAxis);
+          arrow.setDirection(animatingBaseState);
+          arrow.rotateOnWorldAxis(animatingAxis, animatingAngle*t);
+          if (t >= 1) {
+            axisArrow.visible = false;
+            animating = false;
+            arrow.setDirection(new THREE.Vector3(...stateToBloch(qubitState)));
+          }
+        }
+
+        render();
+        requestAnimationFrame( animate );
+
+      }
+
+      function render() {
+
+        renderer.render( scene, camera );
+
+      }
+
+    </script>
+
+  </body>
+</html>
