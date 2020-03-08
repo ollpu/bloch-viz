@@ -34,41 +34,58 @@
       }
 
       var group, camera, scene, renderer, doDraw = true;
-      var arrow, axisArrow;
+      var arrow, axisGroup;
       
       function requestDraw() { doDraw = true; }
       
       var qubitState = math.matrix([[1], [0]]);
       
       var animating = false;
-      var animatingStarted, animatingAxis, animatingAngle, animatingBaseState;
+      var animatingStarted, animatingAxis = new THREE.Vector3(), animatingAngle, animatingBaseState = new THREE.Vector3();
+      var animatingBasisCRotation = 0;
       
-      var showingAxis = false;
-      var showingAxisPort;
+      var showingPort = false;
+      var showingPortAxis = new THREE.Vector3();
+      
+      var axisCumulativeRotation = 0;
       
       function showPortAxis(e) {
         var name = e.target.getAttribute("data-name");
-        showingAxis = true;
-        showingAxisPort = name;
+        showingPort = true;
+        showingPortAxis.set(...stateToBloch(ports[name].eigenvector));
+        if (ports[name].rotation < 0) {
+          showingPortAxis.negate();
+        }
+        requestDraw();
       }
       
       function hidePortAxis() {
-        showingAxis = false;
+        showingPort = false;
+        requestDraw();
       }
       
       function doPort(e) {
         var name = e.target.getAttribute("data-name");
         animatingStarted = (new Date()).getTime();
-        animatingAxis = new THREE.Vector3(...stateToBloch(ports[name].eigenvector));
+        animatingAxis.set(...stateToBloch(ports[name].eigenvector));
         animatingAngle = ports[name].rotation;
-        animatingBaseState = new THREE.Vector3(...stateToBloch(qubitState));
+        if (animatingAngle < 0) {
+          animatingAngle *= -1;
+          animatingAxis.negate();
+        }
+        animatingBaseState.set(...stateToBloch(qubitState));
+        animatingBasisCRotation = axisCumulativeRotation;
+        axisCumulativeRotation += animatingAngle;
+        axisCumulativeRotation %= 2*Math.PI;
         qubitState = math.multiply(ports[name].mat, qubitState);
         updateInfo();
         animating = true;
       }
       
       function updateInfo() {
-        document.getElementById("info").innerHTML = math.format(qubitState, 2);
+        var [[a], [b]] = qubitState._data;
+        var text = 
+        document.getElementById("info").innerHTML = math.format(qubitState, { notation: "fixed", precision: 2 });
       }
       
       for (var name in ports) {
@@ -83,7 +100,6 @@
 
         renderer = new THREE.WebGLRenderer( { antialias: true } );
         renderer.setPixelRatio( window.devicePixelRatio );
-        renderer.setSize( window.innerWidth, window.innerHeight );
         renderer.setClearColor(0xffffff, 1);
         document.body.appendChild( renderer.domElement );
 
@@ -92,6 +108,8 @@
         camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
         camera.position.set( 15, 20, 30 );
         scene.add( camera );
+        
+        onWindowResize();
 
         // controls
 
@@ -137,32 +155,6 @@
         group = new THREE.Group();
         scene.add(group);
 
-        // points
-
-        // var vertices = new THREE.DodecahedronGeometry( 2 ).vertices;
-
-        // for ( var i = 0; i < vertices.length; i ++ ) {
-
-        //   //vertices[ i ].add( randomPoint().multiplyScalar( 2 ) ); // wiggle the points
-
-        // }
-
-        // var pointsMaterial = new THREE.PointsMaterial( {
-
-        //   color: 0x0080ff,
-        //   map: texture,
-        //   size: 1,
-        //   alphaTest: 0.5
-
-        // } );
-
-        // var pointsGeometry = new THREE.BufferGeometry().setFromPoints( vertices );
-
-        // var points = new THREE.Points( pointsGeometry, pointsMaterial );
-        // group.add( points );
-
-        // convex hull
-
         var meshMaterial = new THREE.MeshLambertMaterial( {
           color: 0xbbbbbb,
           opacity: 0.5,
@@ -177,12 +169,12 @@
         //group.add( mesh );
 
         var mesh = new THREE.Mesh( meshGeometry, meshMaterial.clone() );
-        mesh.material.side = THREE.FrontSide; // front faces
+        mesh.material.side = THREE.FrontSide;
         mesh.renderOrder = 1;
         group.add( mesh );
         
         
-        var circle_dash_material = new THREE.LineDashedMaterial({
+        var circleDashMaterial = new THREE.LineDashedMaterial({
           color: 0x000000,
           linewidth: 1,
           scale: 1,
@@ -193,7 +185,7 @@
         circle_dash_g.rotateX(Math.PI/2);
         circle_dash_g.vertices.shift();
         circle_dash_g.vertices.push(circle_dash_g.vertices[0]);
-        var circle_dash = new THREE.Line(circle_dash_g, circle_dash_material);
+        var circle_dash = new THREE.Line(circle_dash_g, circleDashMaterial);
         circle_dash.computeLineDistances();
         scene.add(circle_dash);
         
@@ -201,60 +193,111 @@
         arrow.line.material.linewidth = 2;
         group.add(arrow);
         
-        axisArrow = new THREE.ArrowHelper(new THREE.Vector3(...stateToBloch(qubitState)), new THREE.Vector3(0, 0, 0), 15, 0x000000, 1, 0.4);
-        var axisMaterial = new THREE.LineDashedMaterial({
-          color: 0x000000,
-          linewidth: 1,
+        
+        axisGroup = new THREE.Group();
+        // axisGroup.matrixAutoUpdate = false;
+        scene.add(axisGroup);
+        
+        var axisLineGeometry = new THREE.Geometry();
+        axisLineGeometry.vertices.push(new THREE.Vector3(0, -12, 0), new THREE.Vector3(0, 12, 0));
+        var axisLineMaterial = new THREE.LineDashedMaterial({
+          color: 0xee0000,
+          linewidth: 2,
           scale: 1,
           dashSize: 0.5,
           gapSize: 0.5,
         });
-        axisArrow.line.material = axisMaterial;
-        axisArrow.visible = false;
-        group.add(axisArrow);
+        var axisLine = new THREE.LineSegments(axisLineGeometry, axisLineMaterial);
+        axisLine.computeLineDistances();
+        axisGroup.add(axisLine);
+        
+        var axisIconGeometry = new THREE.PlaneGeometry(2, 2);
+        var axisIconTexture = loader.load("/assets/rotate.png");
+        var axisIconMaterial = new THREE.MeshBasicMaterial({ 
+          alphaMap: axisIconTexture,
+          alphaTest: 0.1,
+          transparent: true,
+          color: 0x000000,
+          side: THREE.DoubleSide,
+        });
+        var axisIcon = new THREE.Mesh(axisIconGeometry, axisIconMaterial);
+        axisIcon.renderOrder = 0;
+        axisIcon.position.set(0, 5, 0);
+        axisIcon.rotateX(-Math.PI/2);
+        axisGroup.add(axisIcon);
+        
+        var sAxisIcon = axisIcon.clone();
+        sAxisIcon.position.set(0, -5, 0);
+        axisGroup.add(sAxisIcon);
+        
+        // axisArrow = new THREE.ArrowHelper(new THREE.Vector3(...stateToBloch(qubitState)), new THREE.Vector3(0, 0, 0), 15, 0x000000, 1, 0.4);
+        // var axisMaterial = new THREE.LineDashedMaterial({
+        //   color: 0x000000,
+        //   linewidth: 1,
+        //   scale: 1,
+        //   dashSize: 0.5,
+        //   gapSize: 0.5,
+        // });
+        // axisArrow.line.material = axisMaterial;
+        // axisArrow.visible = false;
+        // group.add(axisArrow);
         
         window.addEventListener( 'resize', onWindowResize, false );
 
       }
 
       function onWindowResize() {
-
-        camera.aspect = window.innerWidth / window.innerHeight;
+        var width = window.innerWidth, height = window.innerHeight;
+        width = Math.min(width, height);
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
 
-        renderer.setSize( window.innerWidth, window.innerHeight );
-
+        renderer.setSize(width, height);
+        
+        requestDraw();
       }
 
       function animate() {
-
-        //group.rotation.y += 0.005;
         if (animating) {
           doDraw = true;
           var t = ((new Date()).getTime() - animatingStarted)/1000;
-          //var sv = ports[animatingPort].animatedRotation(animatingBaseState, t);
-          //arrow.setDirection(new THREE.Vector3(...stateToBloch(sv)));
-          axisArrow.visible = true;
-          axisArrow.setDirection(animatingAxis);
-          arrow.setDirection(animatingBaseState);
-          arrow.rotateOnWorldAxis(animatingAxis, animatingAngle*t);
           if (t >= 1) {
-            axisArrow.visible = false;
             animating = false;
             arrow.setDirection(new THREE.Vector3(...stateToBloch(qubitState)));
+          } else {
+            rotateToVector(axisGroup, animatingAxis);
+            axisGroup.rotateOnWorldAxis(animatingAxis, animatingBasisCRotation + animatingAngle*t);
+            arrow.setDirection(animatingBaseState);
+            arrow.rotateOnWorldAxis(animatingAxis, animatingAngle*t);
           }
+        } else if (showingPort) {
+          rotateToVector(axisGroup, showingPortAxis);
+          axisGroup.rotateOnWorldAxis(showingPortAxis, axisCumulativeRotation);
         }
+        axisGroup.visible = animating || showingPort;
 
         if (doDraw) render();
         doDraw = false;
         requestAnimationFrame( animate );
 
       }
+      
+      // Copied from ArrowHelper implementation
+      var _axis = new THREE.Vector3();
+      function rotateToVector(obj, dir) {
+        if ( dir.y > 0.99999 ) {
+          obj.quaternion.set( 0, 0, 0, 1 );
+        } else if ( dir.y < - 0.99999 ) {
+          obj.quaternion.set( 1, 0, 0, 0 );
+        } else {
+          _axis.set( dir.z, 0, - dir.x ).normalize();
+          var radians = Math.acos( dir.y );
+          obj.quaternion.setFromAxisAngle( _axis, radians );
+        }
+      }
 
       function render() {
-
         renderer.render( scene, camera );
-
       }
 
     </script>
