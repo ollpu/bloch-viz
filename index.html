@@ -96,6 +96,8 @@
       animate();
       
       function init3D() {
+        THREE.Object3D.DefaultUp.set(0, 0, 1);
+        
         scene = new THREE.Scene();
 
         renderer = new THREE.WebGLRenderer( { antialias: true } );
@@ -106,7 +108,7 @@
         // camera
 
         camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
-        camera.position.set( 15, 20, 30 );
+        camera.position.set(30, 15, 20);
         scene.add( camera );
         
         onWindowResize();
@@ -122,31 +124,26 @@
 
         scene.add( new THREE.AmbientLight( 0x222222 ) );
 
-        // light
-
         var light = new THREE.PointLight( 0xffffff, 1 );
-        light.position.set(-50, 100, 50);
+        light.position.set(50, -50, 100);
         scene.add( light );
 
-        // helper
-
-        scene.add( new THREE.AxesHelper( 12 ) );
-
-        // textures
+        scene.add(new THREE.AxesHelper(12));
 
         var loader = new THREE.TextureLoader();
+        
         var ket0t = loader.load('assets/ket 0.png', requestDraw);
         var ket1t = loader.load('assets/ket 1.png', requestDraw);
         var ket0m = new THREE.SpriteMaterial({ map: ket0t, alphaTest: 0.1, sizeAttenuation: false });
         var ket1m = new THREE.SpriteMaterial({ map: ket1t, alphaTest: 0.1, sizeAttenuation: false });
         var ket0s = new THREE.Sprite(ket0m);
         ket0s.renderOrder = 0;
-        ket0s.position.set(0, 10, 0);
+        ket0s.position.set(0, 0, 10);
         ket0s.center.set(-0.5, -0.5);
         ket0s.scale.multiplyScalar(1/32);
         var ket1s = new THREE.Sprite(ket1m);
         ket1s.renderOrder = 0;
-        ket1s.position.set(0, -10, 0);
+        ket1s.position.set(0, 0, -10);
         ket1s.center.set(0.5, 1.5);
         ket1s.scale.multiplyScalar(1/32);
         scene.add(ket0s);
@@ -186,7 +183,7 @@
           gapSize: 0.5,
         });
         var circleZGeometry = circleGeometry.clone();
-        circleZGeometry.rotateX(Math.PI/2);
+        //circleZGeometry.rotateX(Math.PI/2);
         var circleZ = new THREE.Line(circleZGeometry, circleZMaterial);
         circleZ.computeLineDistances();
         scene.add(circleZ);
@@ -196,12 +193,13 @@
           linewidth: 1,
         });
         var circleXGeometry = circleGeometry.clone();
+        circleXGeometry.rotateY(Math.PI/2);
         var circleX = new THREE.Line(circleXGeometry, circleXMaterial);
         circleX.computeLineDistances();
         scene.add(circleX);
         
         var circleYGeometry = circleGeometry.clone();
-        circleYGeometry.rotateY(Math.PI/2);
+        circleYGeometry.rotateX(Math.PI/2);
         var circleY = new THREE.Line(circleYGeometry, circleXMaterial);
         circleY.computeLineDistances();
         scene.add(circleY);
@@ -216,7 +214,7 @@
         scene.add(axisGroup);
         
         var axisLineGeometry = new THREE.Geometry();
-        axisLineGeometry.vertices.push(new THREE.Vector3(0, -12, 0), new THREE.Vector3(0, 12, 0));
+        axisLineGeometry.vertices.push(new THREE.Vector3(0, 0, -12), new THREE.Vector3(0, 0, 12));
         var axisLineMaterial = new THREE.LineDashedMaterial({
           color: 0xee0000,
           linewidth: 2,
@@ -239,27 +237,15 @@
         });
         var axisIcon = new THREE.Mesh(axisIconGeometry, axisIconMaterial);
         axisIcon.renderOrder = 0;
-        axisIcon.position.set(0, 5, 0);
-        axisIcon.rotateX(-Math.PI/2);
+        axisIcon.position.set(0, 0, 5);
+        axisIcon.rotateZ(Math.PI/2);
         axisGroup.add(axisIcon);
         
         var sAxisIcon = axisIcon.clone();
-        sAxisIcon.position.set(0, -5, 0);
+        sAxisIcon.position.set(0, 0, -5);
         axisGroup.add(sAxisIcon);
         
-        // axisArrow = new THREE.ArrowHelper(new THREE.Vector3(...stateToBloch(qubitState)), new THREE.Vector3(0, 0, 0), 15, 0x000000, 1, 0.4);
-        // var axisMaterial = new THREE.LineDashedMaterial({
-        //   color: 0x000000,
-        //   linewidth: 1,
-        //   scale: 1,
-        //   dashSize: 0.5,
-        //   gapSize: 0.5,
-        // });
-        // axisArrow.line.material = axisMaterial;
-        // axisArrow.visible = false;
-        // group.add(axisArrow);
-        
-        window.addEventListener( 'resize', onWindowResize, false );
+        window.addEventListener('resize', onWindowResize, false);
 
       }
 
@@ -302,14 +288,14 @@
       // Copied from ArrowHelper implementation
       var _axis = new THREE.Vector3();
       function rotateToVector(obj, dir) {
-        if ( dir.y > 0.99999 ) {
-          obj.quaternion.set( 0, 0, 0, 1 );
-        } else if ( dir.y < - 0.99999 ) {
-          obj.quaternion.set( 1, 0, 0, 0 );
+        if (dir.z > 0.99999) {
+          obj.quaternion.set(0, 0, 0, 1);
+        } else if (dir.z < -0.99999) {
+          obj.quaternion.set(1, 0, 0, 0);
         } else {
-          _axis.set( dir.z, 0, - dir.x ).normalize();
-          var radians = Math.acos( dir.y );
-          obj.quaternion.setFromAxisAngle( _axis, radians );
+          _axis.set(-dir.y, dir.x, 0).normalize();
+          var radians = Math.acos(dir.z);
+          obj.quaternion.setFromAxisAngle( _axis, radians);
         }
       }
 

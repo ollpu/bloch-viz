@@ -22,10 +22,10 @@ function eigenbasis(eig) {
 function stateToBloch(state) {
   var [[a], [b]] = state._data;
   var ac = math.conj(a), bc = math.conj(b);
-  // order <Y>, <Z>, <X>
+  // returns <s|X|s>, <s|Y|s>, <s|Z|s>, i.e. state's coordinates on the bloch sphere
   return [
+    math.re(math.add(math.multiply(ac, b), math.multiply(a, bc))),
     math.re(math.add(math.multiply(math.complex(0, -1), ac, b), math.multiply(math.complex(0, 1), a, bc))),
     math.re(math.subtract(math.multiply(a, ac), math.multiply(b, bc))),
-    math.re(math.add(math.multiply(ac, b), math.multiply(a, bc))),
   ];
 }
