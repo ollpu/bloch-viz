@@ -115,7 +115,7 @@
 
         var orbit = new OrbitControls( camera, renderer.domElement );
         orbit.minDistance = 20;
-        orbit.maxDistance = 50;
+        orbit.maxDistance = 80;
         orbit.maxPolarAngle = Math.PI / 2;
         orbit.enablePan = false;
         orbit.addEventListener('change', requestDraw);
@@ -147,7 +147,7 @@
         var ket1s = new THREE.Sprite(ket1m);
         ket1s.renderOrder = 0;
         ket1s.position.set(0, -10, 0);
-        ket1s.center.set(-0.5, 1.5);
+        ket1s.center.set(0.5, 1.5);
         ket1s.scale.multiplyScalar(1/32);
         scene.add(ket0s);
         scene.add(ket1s);
@@ -174,20 +174,37 @@
         group.add( mesh );
         
         
-        var circleDashMaterial = new THREE.LineDashedMaterial({
+        var circleGeometry = new THREE.CircleGeometry(10.05, 64);
+        circleGeometry.vertices.shift();
+        circleGeometry.vertices.push(circleGeometry.vertices[0]);
+        
+        var circleZMaterial = new THREE.LineDashedMaterial({
           color: 0x000000,
           linewidth: 1,
           scale: 1,
           dashSize: 0.5,
           gapSize: 0.5,
         });
-        var circle_dash_g = new THREE.CircleGeometry(10.01, 64);
-        circle_dash_g.rotateX(Math.PI/2);
-        circle_dash_g.vertices.shift();
-        circle_dash_g.vertices.push(circle_dash_g.vertices[0]);
-        var circle_dash = new THREE.Line(circle_dash_g, circleDashMaterial);
-        circle_dash.computeLineDistances();
-        scene.add(circle_dash);
+        var circleZGeometry = circleGeometry.clone();
+        circleZGeometry.rotateX(Math.PI/2);
+        var circleZ = new THREE.Line(circleZGeometry, circleZMaterial);
+        circleZ.computeLineDistances();
+        scene.add(circleZ);
+        
+        var circleXMaterial = new THREE.LineBasicMaterial({
+          color: 0x999999,
+          linewidth: 1,
+        });
+        var circleXGeometry = circleGeometry.clone();
+        var circleX = new THREE.Line(circleXGeometry, circleXMaterial);
+        circleX.computeLineDistances();
+        scene.add(circleX);
+        
+        var circleYGeometry = circleGeometry.clone();
+        circleYGeometry.rotateY(Math.PI/2);
+        var circleY = new THREE.Line(circleYGeometry, circleXMaterial);
+        circleY.computeLineDistances();
+        scene.add(circleY);
         
         arrow = new THREE.ArrowHelper(new THREE.Vector3(...stateToBloch(qubitState)), new THREE.Vector3(0, 0, 0), 10, 0x000000, 1, 0.4);
         arrow.line.material.linewidth = 2;
