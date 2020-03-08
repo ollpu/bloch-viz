@@ -33,8 +33,10 @@
         document.getElementById("controls").appendChild(btn);
       }
 
-      var group, camera, scene, renderer;
+      var group, camera, scene, renderer, doDraw = true;
       var arrow, axisArrow;
+      
+      function requestDraw() { doDraw = true; }
       
       var qubitState = math.matrix([[1], [0]]);
       
@@ -97,6 +99,8 @@
         orbit.minDistance = 20;
         orbit.maxDistance = 50;
         orbit.maxPolarAngle = Math.PI / 2;
+        orbit.enablePan = false;
+        orbit.addEventListener('change', requestDraw);
 
         scene.add( new THREE.AmbientLight( 0x222222 ) );
 
@@ -113,8 +117,8 @@
         // textures
 
         var loader = new THREE.TextureLoader();
-        var ket0t = loader.load('assets/ket 0.png');
-        var ket1t = loader.load('assets/ket 1.png');
+        var ket0t = loader.load('assets/ket 0.png', requestDraw);
+        var ket1t = loader.load('assets/ket 1.png', requestDraw);
         var ket0m = new THREE.SpriteMaterial({ map: ket0t, alphaTest: 0.1, sizeAttenuation: false });
         var ket1m = new THREE.SpriteMaterial({ map: ket1t, alphaTest: 0.1, sizeAttenuation: false });
         var ket0s = new THREE.Sprite(ket0m);
@@ -165,7 +169,7 @@
           transparent: true
         } );
 
-        var meshGeometry = new THREE.SphereGeometry(10, 128, 128);
+        var meshGeometry = new THREE.SphereGeometry(10, 64, 64);
 
         //var mesh = new THREE.Mesh( meshGeometry, meshMaterial );
         //mesh.material.side = THREE.BackSide; // back faces
@@ -185,7 +189,7 @@
           dashSize: 0.5,
           gapSize: 0.5,
         });
-        var circle_dash_g = new THREE.CircleGeometry(10.01, 128);
+        var circle_dash_g = new THREE.CircleGeometry(10.01, 64);
         circle_dash_g.rotateX(Math.PI/2);
         circle_dash_g.vertices.shift();
         circle_dash_g.vertices.push(circle_dash_g.vertices[0]);
@@ -226,6 +230,7 @@
 
         //group.rotation.y += 0.005;
         if (animating) {
+          doDraw = true;
           var t = ((new Date()).getTime() - animatingStarted)/1000;
           //var sv = ports[animatingPort].animatedRotation(animatingBaseState, t);
           //arrow.setDirection(new THREE.Vector3(...stateToBloch(sv)));
@@ -240,7 +245,8 @@
           }
         }
 
-        render();
+        if (doDraw) render();
+        doDraw = false;
         requestAnimationFrame( animate );
 
       }
