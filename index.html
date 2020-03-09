@@ -97,7 +97,7 @@
           return (fSign ? "+(" : "(") + reSS + reFmt + imSS + imFmt + "<i>i</i>)";
         } else if (showIm) {
           var imSS = imSign ? (fSign ? "+" : "") : "&minus;";
-          return imSS + imFmt;
+          return imSS + imFmt + "<i>i</i>";
         } else {
           // only show real part (may be 0)
           var reSS = reSign ? (fSign ? "+" : "") : "&minus;";
