@@ -10,18 +10,17 @@
     <script src="/ports.js"></script>
   </head>
   <body>
-    <div id="info"></div>
+    <div id="info">
+      <span id="ket0">1</span><span style="">|</span>0<span style="">&#x232A;</span><!--
+   --><wbr><span id="ket1">+0</span><span style="">|</span>1<span style="">&#x232A;</span>
+    </div>
     
     <div id="controls">
     </div>
 
     <script type="module">
-
       import * as THREE from '/lib/three.module.js';
-
       import { OrbitControls } from '/lib/OrbitControls.js';
-
-
       
       function registerPort(name) {
         var btn = document.createElement("button");
@@ -82,10 +81,35 @@
         animating = true;
       }
       
+      function formatComplex(c, fSign) {
+        var re = math.re(c), im = math.im(c);
+        var showRe = math.abs(re) >= 0.01;
+        var showIm = math.abs(im) >= 0.01;
+        var reSign = re >= 0;
+        var imSign = im >= 0;
+        var reFmt = math.format(math.abs(re), {notation: "fixed", precision: 2});
+        var imFmt = math.format(math.abs(im), {notation: "fixed", precision: 2});
+        if (reFmt.substring(2, 4) == "00") reFmt = reFmt.substring(0, 1);
+        if (imFmt.substring(2, 4) == "00") imFmt = imFmt.substring(0, 1);
+        if (showRe && showIm) {
+          var reSS = reSign ? "" : "&minus;";
+          var imSS = imSign ? "+" : "&minus;";
+          return (fSign ? "+(" : "(") + reSS + reFmt + imSS + imFmt + "<i>i</i>)";
+        } else if (showIm) {
+          var imSS = imSign ? (fSign ? "+" : "") : "&minus;";
+          return imSS + imFmt;
+        } else {
+          // only show real part (may be 0)
+          var reSS = reSign ? (fSign ? "+" : "") : "&minus;";
+          return reSS + reFmt;
+        }
+      }
       function updateInfo() {
         var [[a], [b]] = qubitState._data;
-        var text = 
-        document.getElementById("info").innerHTML = math.format(qubitState, { notation: "fixed", precision: 2 });
+        document.getElementById("ket0").innerHTML = formatComplex(a, false);
+        document.getElementById("ket1").innerHTML = formatComplex(b, true);
+        // var text = 
+        //document.getElementById("info").innerHTML = math.format(qubitState, { notation: "fixed", precision: 2 });
       }
       
       for (var name in ports) {
@@ -260,7 +284,7 @@
         requestDraw();
       }
 
-      function animate() {
+      function animate(T) {
         if (animating) {
           doDraw = true;
           var t = ((new Date()).getTime() - animatingStarted)/1000;
@@ -278,6 +302,11 @@
           axisGroup.rotateOnWorldAxis(showingPortAxis, axisCumulativeRotation);
         }
         axisGroup.visible = animating || showingPort;
+        
+        // qubitState = math.matrix([[Math.cos(T/1000)], [math.complex(0, Math.sin(-T/1000))]]);
+        // updateInfo();
+        // arrow.setDirection(new THREE.Vector3(...stateToBloch(qubitState)));
+        // doDraw=true;
 
         if (doDraw) render();
         doDraw = false;

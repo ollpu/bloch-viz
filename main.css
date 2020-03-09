@@ -1,3 +1,16 @@
+@font-face {
+	font-family: 'Computer Modern Serif';
+	src: url('assets/cmunrm.otf');
+	font-weight: normal;
+	font-style: normal;
+}
+@font-face {
+	font-family: 'Computer Modern Serif';
+	src: url('assets/cmunti.otf');
+	font-weight: normal;
+	font-style: italic;
+}
+
 body {
 	margin: 0;
 	background-color: #fff;
@@ -31,10 +44,13 @@ canvas {
 }
 
 #info {
+  font-family: "Computer Modern Serif";
+  font-size: 2rem;
 	position: absolute;
 	top: 0px;
 	width: 100%;
-	padding: 10px;
+	padding: 5px 0;
+  line-height: 1.3;
 	box-sizing: border-box;
 	text-align: center;
 	-moz-user-select: none;
@@ -44,6 +60,7 @@ canvas {
 	pointer-events: none;
 	z-index: 1; /* TODO Solve this in HTML */
 }
+
 
 a, button, input, select {
 	pointer-events: auto;
