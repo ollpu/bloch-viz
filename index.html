@@ -69,7 +69,7 @@
       
       function doPort(e) {
         var name = e.target.getAttribute("data-name");
-        animatingStarted = (new Date()).getTime();
+        animatingStarted = e.timeStamp;
         animatingAxis.set(...stateToBloch(ports[name].eigenvector));
         animatingAngle = ports[name].rotation;
         if (animatingAngle < 0) {
@@ -291,7 +291,7 @@
       function animate(T) {
         if (animating) {
           doDraw = true;
-          var t = ((new Date()).getTime() - animatingStarted)/1000;
+          var t = (T - animatingStarted)/1000;
           if (t >= 1) {
             animating = false;
             arrow.setDirection(new THREE.Vector3(...stateToBloch(qubitState)));
