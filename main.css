@@ -61,14 +61,14 @@ canvas {
 .settings {
   user-select: none;
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
-  padding: 5px;
+  padding: 1rem;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .by {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  padding: 1rem;
+  float: right;
+  padding: 0;
 }
