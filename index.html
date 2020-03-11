@@ -18,10 +18,18 @@
     <div id="controls">
     </div>
     
+    <div class="settings">
+      <input type="checkbox" id="enable-hamiltonian"></input>
+      <label for="enable-hamiltonian">Simuloi Hamiltonista aikakehitystä</label>
+      <p>
+        <button id="reset">Alusta</button>
+      </p>
+    </div>
+    
     <div class="by">
       Tehnyt Roope Salmi. <a href="https://github.com/ollpu/bloch-viz">Lähdekoodi</a>
     </div>
-
+    
     <script type="module">
       import * as THREE from '/lib/three.module.js';
       import { OrbitControls } from '/lib/OrbitControls.js';
@@ -50,7 +58,14 @@
       var showingPort = false;
       var showingPortAxis = new THREE.Vector3();
       
+      var hamiltonianEvolutionMode = false;
+      var hamiltonianEvolutionSpeed = 0.5;
+      
       var axisCumulativeRotation = 0;
+      
+      // Temporary variables for animate()
+      var tmpVec = new THREE.Vector3();
+      var lastT;
       
       function showPortAxis(e) {
         var name = e.target.getAttribute("data-name");
@@ -112,9 +127,22 @@
         var [[a], [b]] = qubitState._data;
         document.getElementById("ket0").innerHTML = formatComplex(a, false);
         document.getElementById("ket1").innerHTML = formatComplex(b, true);
-        // var text = 
-        //document.getElementById("info").innerHTML = math.format(qubitState, { notation: "fixed", precision: 2 });
       }
+      
+      function toggleHamiltonian(e) {
+        hamiltonianEvolutionMode = e.target.checked;
+        document.getElementById("controls").style.display = hamiltonianEvolutionMode ? "none" : "";
+      }
+      var hamiltonianCheck = document.getElementById("enable-hamiltonian");
+      hamiltonianCheck.addEventListener("click", toggleHamiltonian);
+      hamiltonianCheck.checked = false;
+      
+      document.getElementById("reset").addEventListener("click", function() {
+        animating = false;
+        qubitState = math.matrix([[1], [0]]);
+        updateInfo();
+        requestDraw();
+      });
       
       for (var name in ports) {
         registerPort(name);
@@ -294,7 +322,8 @@
           var t = (T - animatingStarted)/1000;
           if (t >= 1) {
             animating = false;
-            arrow.setDirection(new THREE.Vector3(...stateToBloch(qubitState)));
+            tmpVec.set(...stateToBloch(qubitState));
+            arrow.setDirection(tmpVec);
           } else {
             rotateToVector(axisGroup, animatingAxis);
             axisGroup.rotateOnWorldAxis(animatingAxis, animatingBasisCRotation + animatingAngle*t);
@@ -307,11 +336,18 @@
         }
         axisGroup.visible = animating || showingPort;
         
-        // qubitState = math.matrix([[Math.cos(T/1000)], [math.complex(0, Math.sin(-T/1000))]]);
-        // updateInfo();
-        // arrow.setDirection(new THREE.Vector3(...stateToBloch(qubitState)));
-        // doDraw=true;
+        if (hamiltonianEvolutionMode) {
+          qubitState = math.multiply(RxMat((T-lastT)/1000*hamiltonianEvolutionSpeed), qubitState);
+          updateInfo();
+          doDraw = true;
+        }
+        lastT = T;
 
+        if (doDraw && !animating) {
+          tmpVec.set(...stateToBloch(qubitState));
+          arrow.setDirection(tmpVec);
+        }
+        
         if (doDraw) render();
         doDraw = false;
         requestAnimationFrame( animate );

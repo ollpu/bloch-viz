@@ -29,3 +29,8 @@ function stateToBloch(state) {
     math.re(math.subtract(math.multiply(a, ac), math.multiply(b, bc))),
   ];
 }
+
+function RxMat(theta) {
+  var a = math.cos(theta/2), b = math.complex(0, -math.sin(theta/2));
+  return math.matrix([[a, b], [b, a]]);
+}
