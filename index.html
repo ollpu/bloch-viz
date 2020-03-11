@@ -27,7 +27,7 @@
     </div>
     
     <div class="by">
-      Tehnyt Roope Salmi. <a href="https://github.com/ollpu/bloch-viz">Lähdekoodi</a>
+      <a href="https://github.com/ollpu/bloch-viz">Lähdekoodi</a>
     </div>
     
     <script type="module">
@@ -132,6 +132,7 @@
       function toggleHamiltonian(e) {
         hamiltonianEvolutionMode = e.target.checked;
         document.getElementById("controls").style.display = hamiltonianEvolutionMode ? "none" : "";
+        if (hamiltonianEvolutionMode) animating = false;
       }
       var hamiltonianCheck = document.getElementById("enable-hamiltonian");
       hamiltonianCheck.addEventListener("click", toggleHamiltonian);
