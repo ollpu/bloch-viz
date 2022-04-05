@@ -49,7 +49,17 @@
       
       function requestDraw() { doDraw = true; }
       
-      var qubitState = math.matrix([[1], [0]]);
+      var initialQubitState;
+      if (window.location.search) {
+        let [a, b] = window.location.search.split("?")[1].split("&");
+        a = math.evaluate(a);
+        b = math.evaluate(b);
+        var abs = math.norm([a, b]);
+        initialQubitState = math.divide(math.matrix([[a], [b]]), abs);
+      } else {
+        initialQubitState = math.matrix([[1], [0]]);
+      }
+      var qubitState = initialQubitState;
       
       var animating = false;
       var animatingStarted, animatingAxis = new THREE.Vector3(), animatingAngle, animatingBaseState = new THREE.Vector3();
@@ -140,7 +150,7 @@
       
       document.getElementById("reset").addEventListener("click", function() {
         animating = false;
-        qubitState = math.matrix([[1], [0]]);
+        qubitState = initialQubitState;
         updateInfo();
         requestDraw();
       });
